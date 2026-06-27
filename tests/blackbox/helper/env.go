@@ -297,6 +297,10 @@ func requireAgent(t *testing.T, agentType string) {
 		if os.Getenv("ANTHROPIC_API_KEY") == "" && !hasProviderEnv("opencode") {
 			t.Skipf("blackbox skip: ANTHROPIC_API_KEY not set for opencode")
 		}
+	case "mimocode":
+		if os.Getenv("ANTHROPIC_API_KEY") == "" && !hasProviderEnv("mimocode") {
+			t.Skipf("blackbox skip: ANTHROPIC_API_KEY not set for mimocode")
+		}
 	}
 }
 
@@ -331,6 +335,9 @@ func applyProviderFromEnv(t *testing.T, agentType string, opts map[string]any) {
 		case "gemini":
 			apiKey = firstNonEmpty(os.Getenv("GEMINI_API_KEY"), os.Getenv("GOOGLE_API_KEY"))
 		case "opencode":
+			apiKey = os.Getenv("ANTHROPIC_API_KEY")
+			baseURL = os.Getenv("ANTHROPIC_BASE_URL")
+		case "mimocode":
 			apiKey = os.Getenv("ANTHROPIC_API_KEY")
 			baseURL = os.Getenv("ANTHROPIC_BASE_URL")
 		case "cursor":
@@ -425,6 +432,8 @@ func agentBinName(agentType string) string {
 		return "agent"
 	case "opencode":
 		return "opencode"
+	case "mimocode":
+		return "mimo"
 	case "qoder":
 		return "qoder"
 	case "kimi":
