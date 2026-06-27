@@ -17,6 +17,7 @@ import (
 	"github.com/chenhg5/cc-connect/agent/codex"
 	"github.com/chenhg5/cc-connect/agent/cursor"
 	"github.com/chenhg5/cc-connect/agent/gemini"
+	mimocode "github.com/chenhg5/cc-connect/agent/mimocode"
 	"github.com/chenhg5/cc-connect/agent/opencode"
 	"github.com/chenhg5/cc-connect/core"
 )
@@ -53,6 +54,10 @@ func skipUnlessAgentReady(t *testing.T, agentType string) {
 		if os.Getenv("OPENAI_API_KEY") == "" && os.Getenv("ANTHROPIC_API_KEY") == "" {
 			t.Skipf("skip %s: OPENAI_API_KEY or ANTHROPIC_API_KEY not set", agentType)
 		}
+	case "mimocode":
+		if os.Getenv("OPENAI_API_KEY") == "" && os.Getenv("ANTHROPIC_API_KEY") == "" {
+			t.Skipf("skip %s: OPENAI_API_KEY or ANTHROPIC_API_KEY not set", agentType)
+		}
 	}
 }
 
@@ -61,6 +66,7 @@ var _ = codex.New
 var _ = cursor.New
 var _ = gemini.New
 var _ = opencode.New
+var _ = mimocode.New
 
 // mockPlatform records all messages sent through it for test verification.
 type mockPlatform struct {
@@ -213,6 +219,8 @@ func findAgentBin(agentType string) (string, error) {
 		return "gemini", nil
 	case "opencode":
 		return "opencode", nil
+	case "mimocode":
+		return "mimo", nil
 	case "iflow":
 		return "iflow", nil
 	case "qoder":
@@ -653,7 +661,7 @@ var sharedTestCases = []AgentTestCase{
 }
 
 func TestSharedCasesAcrossAgents(t *testing.T) {
-	agents := []string{"claudecode", "codex", "cursor", "gemini", "opencode"}
+	agents := []string{"claudecode", "codex", "cursor", "gemini", "opencode", "mimocode"}
 	for _, agentType := range agents {
 		for _, tc := range sharedTestCases {
 			tc := tc // capture range variable
