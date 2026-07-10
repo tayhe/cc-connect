@@ -99,7 +99,7 @@ echo "上游目录分布："
 git diff --name-only main..upstream/main | awk -F/ '{print $1"/"$2}' | sort | uniq -c | sort -rn | head
 ```
 
-#### 2b. **关键预判：上游有没有动 mimicode adapter 相关的核心文件**
+#### 2b. **关键预判：上游有没有动 mimocode adapter 相关的核心文件**
 
 ```bash
 # 决定你后续要不要"照搬"模式同步 agent/mimocode/
