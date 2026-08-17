@@ -336,3 +336,65 @@ func TestHandleToolUseErrorNoMessageNoText(t *testing.T) {
 
 // verify Agent implements core.Agent
 var _ core.Agent = (*Agent)(nil)
+
+// verify mimocodeSession implements core.AgentSession.
+// This is the compile-time regression test for the upstream sync that
+// changed AgentSession.Send from (prompt, images, files) to
+// (prompt, messageID, images, files) and core.SaveFilesToDisk from
+// (workDir, files) to (workDir, messageID, files). If a sync reverts
+// mimocode to the old signatures, this line fails to compile.
+var _ core.AgentSession = (*mimocodeSession)(nil)
+
+// TestMimocodeSession_SendScopesFilesByMessageID is the runtime regression
+// test for the same fix: when Send is called with non-empty messageID
+// and a file attachment, the file must land in
+// <workDir>/.cc-connect/attachments/<messageID>/, not the unsanitized
+// flat directory. This guards against a future sync that drops the
+// messageID argument and silently disables per-message file scoping
+// (issue #1459 had the same root cause in core).
+func TestMimocodeSession_SendScopesFilesByMessageID(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	dir := t.TempDir()
+	s := &mimocodeSession{
+		workDir:   dir,
+		ctx:       ctx,
+		cancel:    cancel,
+		events:    make(chan core.Event, 8),
+		alive:     atomic.Bool{},
+		chatID:    atomic.Value{},
+		cmd:       "/bin/true",
+		extraArgs: nil,
+		extraEnv:  nil,
+	}
+	s.alive.Store(true)
+
+	const messageID = "msg_test_abc123"
+	payload := []byte("hello mimocode")
+	files := []core.FileAttachment{{
+		FileName: "hello.txt",
+		MimeType: "text/plain",
+		Data:     payload,
+	}}
+
+	// Send launches a subprocess (/bin/true) which exits immediately, so
+	// the call returns quickly. We don't care about success vs. failure
+	// of the subprocess itself — only that the file-scoped directory
+	// was created and the file saved there.
+	_ = s.Send("test prompt", messageID, nil, files)
+
+	wantDir := filepath.Join(dir, ".cc-connect", "attachments", messageID)
+	wantFile := filepath.Join(wantDir, "hello.txt")
+
+	if _, err := os.Stat(wantFile); err != nil {
+		t.Fatalf("expected file at %s: %v", wantFile, err)
+	}
+	got, err := os.ReadFile(wantFile)
+	if err != nil {
+		t.Fatalf("read %s: %v", wantFile, err)
+	}
+	if string(got) != string(payload) {
+		t.Fatalf("file contents = %q, want %q", got, payload)
+	}
+}
